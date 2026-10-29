@@ -344,6 +344,21 @@ export function orderNote(lines) {
   return tex(c, true);
 }
 
+export function paintLcd(t, text, { color = '#7fe3ff', bg = '#05080a', font = '600 64px Menlo, monospace', dim = false } = {}) {
+  const c = t.image, ctx = c.getContext('2d'), w = c.width, h = c.height;
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = dim ? 0 : 12;
+  ctx.fillStyle = dim ? 'rgba(127,227,255,0.18)' : color;
+  ctx.fillText(text, w / 2, h / 2 + 2);
+  ctx.shadowBlur = 0;
+  t.needsUpdate = true;
+}
+
 export function lcd(text, { w = 256, h = 96, color = '#7fe3ff', bg = '#05080a', font = '600 64px Menlo, monospace' } = {}) {
   const c = canvas(w, h), ctx = c.getContext('2d');
   ctx.fillStyle = bg;

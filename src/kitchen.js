@@ -1,26 +1,27 @@
 // Robotea: procedural tea kitchen (counter, sink, tap, kettle, cabinet, mugs, tea chest, sugar, bin, tray, bell, note, timer) built per style
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rbox, lathe, tube, sphere, cylY, cylZ } from './geo.js';
 import { pbr, tiles, paint, outside, rain, label, orderNote, lcd, sugar, paper } from './textures.js';
 
 export const K = {
   top: 0.92, thick: 0.036, front: 0.2, back: 0.8, x0: -0.98, x1: 0.98,
   wallZ: 0.8, wallT: 0.14, ceil: 2.6, side: 1.32,
-  sink: { x0: 0.36, x1: 0.8, z0: 0.3, z1: 0.66, depth: 0.19, r: 0.04 },
-  tap: { x: 0.58, z: 0.735 }, knob: { x: 0.4, z: 0.74 },
-  win: { x0: 0.24, x1: 0.94, y0: 1.08, y1: 2.06 },
+  sink: { x0: 0.27, x1: 0.67, z0: 0.3, z1: 0.64, depth: 0.19, r: 0.04 },
+  tap: { x: 0.47, z: 0.725 }, knob: { x: 0.29, z: 0.735 },
+  win: { x0: 0.16, x1: 0.86, y0: 1.08, y1: 2.06 },
   upper: { x0: -0.98, x1: -0.2, y0: 1.44, y1: 2.06, z0: 0.47 },
   splashTop: 1.44,
-  kettle: { x: 0.1, z: 0.58 },
-  socket: { x: 0.3, y: 1.04 },
+  kettle: { x: 0.04, z: 0.6 },
+  socket: { x: 0.22, y: 1.04 },
   tray: { x: -0.2, z: 0.4 },
-  bell: { x: -0.47, z: 0.32 },
-  timer: { x: -0.17, z: 0.755 },
-  chest: { x: -0.56, z: 0.68 },
-  sugar: { x: -0.37, z: 0.57 },
-  bin: { x: -0.79, z: 0.42 },
-  note: { x: 0.07, y: 1.27 },
+  bell: { x: -0.44, z: 0.33 },
+  timer: { x: -0.13, z: 0.76 },
+  chest: { x: -0.5, z: 0.68 },
+  sugar: { x: -0.34, z: 0.56 },
+  bin: { x: -0.7, z: 0.42 },
+  note: { x: 0.0, y: 1.27 },
 };
 
 let rectInit = false;
@@ -204,26 +205,38 @@ function knob(M) {
 }
 
 function kettle(M, temp) {
-  const root = new THREE.Group();
-  root.position.set(K.kettle.x, K.top, K.kettle.z);
-  const baseG = new THREE.Group();
-  baseG.add(mesh(lathe([[0, 0], [0.086, 0], [0.09, 0.004], [0.091, 0.016], [0.086, 0.024], [0.07, 0.027], [0, 0.027]], 64), M.plastic));
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.046, 0.0145), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: lcd(temp, { w: 256, h: 80, color: '#8fe9ff' }), emissiveIntensity: 1.6, roughness: 0.25 }));
+  const base = new THREE.Group();
+  base.position.set(K.kettle.x, K.top, K.kettle.z);
+  base.add(mesh(lathe([[0, 0], [0.086, 0], [0.09, 0.004], [0.091, 0.016], [0.086, 0.024], [0.07, 0.027], [0, 0.027]], 64), M.plastic));
+  const screenMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: lcd(temp, { w: 256, h: 80, color: '#8fe9ff' }), emissiveIntensity: 1.6, roughness: 0.25 });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.046, 0.0145), screenMat);
   screen.position.set(-0.008, 0.0135, -0.0915);
   screen.rotation.y = Math.PI;
-  baseG.add(screen);
+  base.add(screen);
   const btn = mesh(cylZ(0.0058, 0.006, 0.026, 0.0135, -0.09, 20), M.whitePlastic, false);
-  baseG.add(btn);
-  root.add(baseG);
+  base.add(btn);
+  const led = new THREE.Mesh(new THREE.CircleGeometry(0.0022, 16), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff8a3a, emissiveIntensity: 0 }));
+  led.position.set(0.026, 0.0135, -0.0932);
+  led.rotation.y = Math.PI;
+  base.add(led);
+  base.userData = { screen, screenMat, led };
 
   const body = new THREE.Group();
-  body.position.y = 0.027;
-  body.add(mesh(lathe([[0, 0], [0.072, 0], [0.079, 0.006], [0.081, 0.024], [0.079, 0.1], [0.073, 0.16], [0.066, 0.186], [0.058, 0.193], [0, 0.193]], 72), M.kettle));
+  body.position.set(K.kettle.x, K.top + 0.027, K.kettle.z);
+  body.add(mesh(lathe([[0, 0], [0.072, 0], [0.079, 0.006], [0.081, 0.024], [0.079, 0.1], [0.073, 0.16], [0.066, 0.186], [0.058, 0.193], [0.05, 0.194], [0.049, 0.186]], 72), M.kettle));
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.071, 0.074, 0.172, 48, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a2c2f, roughness: 0.35, metalness: 0.8, side: THREE.BackSide }));
+  inner.position.y = 0.1;
+  body.add(inner);
   body.add(mesh(lathe([[0.0805, 0.0], [0.0822, 0.003], [0.0822, 0.016], [0.0805, 0.019]], 72), M.trim));
-  body.add(mesh(lathe([[0, 0.205], [0.03, 0.203], [0.052, 0.198], [0.06, 0.193]], 72), M.kettle));
+  const lid = new THREE.Group();
+  lid.position.set(0.054, 0.194, 0);
+  const lidShell = mesh(lathe([[0, 0.011], [0.03, 0.009], [0.052, 0.004], [0.058, 0], [0.05, 0], [0, 0.003]], 72), M.kettle);
+  lidShell.position.x = -0.054;
+  lid.add(lidShell);
   const lidKnob = mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.014, 28), M.trim);
-  lidKnob.position.set(0, 0.211, 0);
-  body.add(lidKnob);
+  lidKnob.position.set(-0.054, 0.017, 0);
+  lid.add(lidKnob);
+  body.add(lid);
   const spout = mesh(new THREE.CylinderGeometry(0.011, 0.024, 0.075, 28, 1, true), M.kettle);
   spout.geometry.translate(0, 0.0375, 0);
   spout.rotation.z = 0.95;
@@ -232,15 +245,13 @@ function kettle(M, temp) {
   const handleGeo = tube([[0.052, 0.188, 0], [0.105, 0.19, 0], [0.128, 0.16, 0], [0.126, 0.09, 0], [0.104, 0.05, 0], [0.074, 0.04, 0]], 0.012, 64, 16);
   handleGeo.scale(1, 1, 1.45);
   body.add(mesh(handleGeo, M.trim));
-  const sw = mesh(rbox(0.016, 0.01, 0.014, 0.003, 0.098, 0.044, 0, 2), M.plastic, false);
-  body.add(sw);
+  body.add(mesh(rbox(0.016, 0.01, 0.014, 0.003, 0.098, 0.044, 0, 2), M.plastic, false));
   const win = mesh(rbox(0.014, 0.11, 0.004, 0.002, 0.0, 0.085, 0, 2), new THREE.MeshPhysicalMaterial({ color: 0x1a2a33, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.85 }), false);
   win.position.set(0.026, 0, -0.074);
   win.rotation.y = 0.33;
   body.add(win);
-  root.add(body);
-  root.userData.body = body;
-  return root;
+  body.userData = { lid };
+  return { base, body };
 }
 
 function cable(M) {
@@ -397,24 +408,23 @@ function teaChest(M) {
   g.add(box(w, h, t, 0, h / 2, d / 2 - t / 2, M.wood));
   const cw = (w - 2 * t) / 3;
   for (const k of [-1, 1]) g.add(box(0.005, h - 0.006, d - 2 * t, k * cw / 2, h / 2, 0, M.wood));
-  const kinds = [['FRUIT', '#b4407a'], ['GREEN', '#4f8a3c'], ['BLACK', '#b8792a']];
+  const kinds = [['fruit', 'FRUIT', '#b4407a'], ['green', 'GREEN', '#4f8a3c'], ['black', 'BLACK', '#b8792a']];
   const bags = [];
-  kinds.forEach(([name, color], i) => {
+  const bagGeo = rbox(0.058, 0.064, 0.0045, 0.0016, 0, 0, 0, 2);
+  const tagGeo = new THREE.BoxGeometry(0.03, 0.034, 0.0012);
+  kinds.forEach(([kind, name, color], i) => {
     const cx = (i - 1) * cw;
+    const tagMat = new THREE.MeshStandardMaterial({ map: label([name], { w: 256, h: 290, bg: color, color: '#ffffff', font: '700 62px Helvetica' }), roughness: 0.85 });
     for (let j = 0; j < 5; j++) {
       const z = -0.034 + j * 0.017;
-      const bag = mesh(rbox(0.058, 0.064, 0.0045, 0.0016, 0, 0, 0, 2), M.bag);
-      bag.position.set(cx, 0.05 + (j % 2) * 0.003, z);
+      const bag = mesh(bagGeo, M.bag);
+      bag.position.set(K.chest.x + cx, K.top + 0.05 + (j % 2) * 0.003, K.chest.z + z);
       bag.rotation.set(-0.12 + j * 0.03, (j - 2) * 0.03, (j % 3 - 1) * 0.02);
-      g.add(bag);
-      bags.push({ mesh: bag, kind: name.toLowerCase() });
+      const tag = mesh(tagGeo, tagMat, false);
+      tag.position.set(K.chest.x + cx + (j - 2) * 0.004, K.top + 0.034 + j * 0.002, K.chest.z - d / 2 - 0.0025 - j * 0.0016);
+      tag.rotation.set(0, Math.PI, (i - 1) * 0.06 + (j - 2) * 0.03);
+      bags.push({ mesh: bag, tag, kind, color });
     }
-    const tagMat = new THREE.MeshStandardMaterial({ map: label([name], { w: 256, h: 290, bg: color, color: '#ffffff', font: '700 62px Helvetica' }), roughness: 0.85 });
-    const tag = mesh(new THREE.PlaneGeometry(0.03, 0.034), tagMat, false);
-    tag.position.set(cx, 0.035, -d / 2 - 0.0012);
-    tag.rotation.set(0, Math.PI, ((i - 1) * 0.06));
-    g.add(tag);
-    g.add(mesh(tube([[cx, 0.07, -0.032], [cx, 0.08, -0.045], [cx, 0.074, -d / 2 - 0.002], [cx, 0.052, -d / 2 - 0.0015]], 0.0007, 24, 5), M.string, false));
   });
   g.userData.bags = bags;
   return g;
@@ -425,15 +435,18 @@ function sugarBowl(M) {
   g.position.set(K.sugar.x, K.top, K.sugar.z);
   g.add(mesh(lathe([[0, 0.001], [0.03, 0], [0.04, 0.006], [0.048, 0.024], [0.0515, 0.048], [0.0505, 0.056], [0.0478, 0.0565], [0.046, 0.05], [0.043, 0.026], [0.034, 0.012], [0, 0.01]], 64), M.bowl));
   const s = sugar();
-  const pile = mesh(sphere(0.046, 0, 0.036, 0, 40, 16, 1, 0.22, 1), new THREE.MeshStandardMaterial({ map: s.map, normalMap: s.normalMap, roughness: 0.75 }), false);
-  g.add(pile);
+  const sugarMat = new THREE.MeshStandardMaterial({ map: s.map, normalMap: s.normalMap, roughness: 0.75 });
+  g.add(mesh(sphere(0.046, 0, 0.036, 0, 40, 16, 1, 0.22, 1), sugarMat, false));
   const spoon = new THREE.Group();
   spoon.add(mesh(sphere(0.016, 0, 0, 0, 24, 12, 1, 0.32, 1.4), M.steel));
   spoon.add(mesh(tube([[0, 0.003, 0.02], [0, 0.009, 0.05], [0, 0.012, 0.09], [0, 0.011, 0.115]], 0.0028, 32, 8), M.steel));
-  spoon.position.set(-0.012, 0.047, -0.005);
+  const load = mesh(sphere(0.014, 0, 0.004, 0, 20, 10, 1, 0.45, 1.3), sugarMat, false);
+  load.visible = false;
+  spoon.add(load);
+  spoon.position.set(K.sugar.x - 0.012, K.top + 0.047, K.sugar.z - 0.005);
   spoon.rotation.set(0.42, -2.3, 0);
-  g.add(spoon);
-  g.userData.spoon = spoon;
+  spoon.userData = { load };
+  g.userData = { spoon, sugarMat };
   return g;
 }
 
@@ -517,7 +530,7 @@ function pendant(M, st) {
 
 function plant(M) {
   const g = new THREE.Group();
-  g.position.set(0.74, K.win.y0, K.wallZ + 0.04);
+  g.position.set(K.win.x1 - 0.12, K.win.y0, K.wallZ + 0.04);
   g.add(mesh(lathe([[0, 0], [0.045, 0], [0.055, 0.09], [0.058, 0.095], [0.05, 0.095], [0.047, 0.01], [0, 0.01]], 40), M.pot));
   const soil = mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.004, 32), M.soil, false);
   soil.position.y = 0.085;
@@ -541,13 +554,16 @@ export function buildKitchen(st, opts = {}) {
   group.add(baseCabinets(M));
   const tapG = tap(M), knobG = knob(M);
   group.add(tapG, knobG);
-  const kettleG = kettle(M, opts.temp ?? '18°C');
-  group.add(kettleG, cable(M));
+  const kt = kettle(M, opts.temp ?? '18°C');
+  group.add(kt.base, kt.body, cable(M));
   const upper = upperCabinet(M, st);
   group.add(upper.group);
+  for (const m of upper.mugs) { upper.group.remove(m); group.add(m); }
   const chest = teaChest(M), bowl = sugarBowl(M), binG = bin(M), trayG = tray(M, st), bellG = bell(M), timerG = timer(M);
-  group.add(chest, bowl, binG, trayG, bellG, timerG);
-  group.add(note(opts.order ?? ['Black tea', 'strong', '2 sugars', 'full mug']));
+  group.add(chest, bowl, binG, trayG, bellG, timerG, bowl.userData.spoon);
+  for (const b of chest.userData.bags) group.add(b.mesh, b.tag);
+  const noteG = note(opts.order ?? ['Black tea', 'strong', '2 sugars', 'full mug']);
+  group.add(noteG);
   if (st.plant) group.add(plant(M));
 
   const lights = [];
@@ -592,6 +608,44 @@ export function buildKitchen(st, opts = {}) {
   for (const l of lights) group.add(l);
   return {
     group, materials: M, lights,
-    parts: { tap: tapG, knob: knobG, kettle: kettleG, doors: upper.doors, mugs: upper.mugs, chest, sugar: bowl, bin: binG, tray: trayG, bell: bellG, timer: timerG },
+    parts: {
+      tap: tapG, knob: knobG, kettle: kt.body, kettleBase: kt.base, doors: upper.doors, mugs: upper.mugs,
+      chest, bags: chest.userData.bags, sugar: bowl, spoon: bowl.userData.spoon, bin: binG, tray: trayG, bell: bellG, timer: timerG, note: noteG,
+    },
   };
+}
+
+export function optimizeStatic(group, dynamic) {
+  group.updateMatrixWorld(true);
+  const skip = new Set();
+  for (const d of dynamic) d.traverse(o => skip.add(o));
+  const buckets = new Map();
+  const remove = [];
+  group.traverse(o => {
+    if (!o.isMesh || skip.has(o) || o.isSkinnedMesh || Array.isArray(o.material) || o.material.transparent) return;
+    const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    g.applyMatrix4(o.matrixWorld);
+    const attrs = Object.keys(g.attributes).filter(k => ['position', 'normal', 'uv'].includes(k)).sort();
+    for (const k of Object.keys(g.attributes)) if (!attrs.includes(k)) g.deleteAttribute(k);
+    g.morphAttributes = {};
+    const key = `${o.material.uuid}|${attrs.join(',')}|${o.castShadow ? 1 : 0}|${o.receiveShadow ? 1 : 0}`;
+    if (!buckets.has(key)) buckets.set(key, { mat: o.material, cast: o.castShadow, recv: o.receiveShadow, geos: [] });
+    buckets.get(key).geos.push(g);
+    remove.push(o);
+  });
+  for (const o of remove) o.parent.remove(o);
+  const merged = new THREE.Group();
+  merged.name = 'static';
+  for (const b of buckets.values()) {
+    const geo = mergeGeometries(b.geos, false);
+    if (!geo) continue;
+    const m = new THREE.Mesh(geo, b.mat);
+    m.castShadow = b.cast;
+    m.receiveShadow = b.recv;
+    m.matrixAutoUpdate = false;
+    merged.add(m);
+  }
+  group.add(merged);
+  group.traverse(o => { if (!skip.has(o) && !o.isLight) { o.matrixAutoUpdate = false; } });
+  return { meshes: merged.children.length, removed: remove.length };
 }
