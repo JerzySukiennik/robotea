@@ -1,0 +1,89 @@
+{
+ "clap": [
+  "clap-467997.mp3",
+  "clap-412157.mp3",
+  "clap-391898.mp3",
+  "clap-478657.mp3",
+  "clap-388042.mp3",
+  "clap-860150.mp3"
+ ],
+ "slap": [
+  "slap-537735.mp3",
+  "slap-463687.mp3"
+ ],
+ "bump": [
+  "bump-683031.mp3",
+  "bump-387973.mp3"
+ ],
+ "glock": [
+  "glock-855652-0.mp3",
+  "glock-855652-1.mp3",
+  "glock-828786.mp3"
+ ],
+ "beretta": [
+  "beretta-415912.mp3",
+  "beretta-828786.mp3"
+ ],
+ "m1911": [
+  "m1911-392229.mp3",
+  "m1911-346906.mp3"
+ ],
+ "deagle": [
+  "deagle-330634.mp3",
+  "deagle-231243.mp3",
+  "deagle-712310.mp3"
+ ],
+ "revolver": [
+  "revolver-541818-0.mp3",
+  "revolver-541818-1.mp3",
+  "revolver-541818-2.mp3",
+  "revolver-346906.mp3"
+ ],
+ "pew": [
+  "pew-819682.mp3",
+  "pew-660404.mp3",
+  "pew-713312.mp3"
+ ],
+ "casing": [
+  "casing-210102-0.mp3",
+  "casing-210102-1.mp3",
+  "casing-347604.mp3"
+ ],
+ "steel": [
+  "steel-351371.mp3",
+  "steel-837455.mp3",
+  "steel-182263-2.mp3",
+  "steel-182263-3.mp3",
+  "steel-711881.mp3"
+ ],
+ "dry": [
+  "dry-119168.mp3",
+  "dry-725402.mp3"
+ ],
+ "magout": [
+  "magout-854499.mp3"
+ ],
+ "magin": [
+  "magin-854499.mp3",
+  "magin-171209.mp3"
+ ],
+ "rack": [
+  "rack-854499.mp3",
+  "rack-151070.mp3"
+ ],
+ "smgout": [
+  "smgout-677160.mp3"
+ ],
+ "smgin": [
+  "smgin-677160.mp3"
+ ],
+ "smgbolt": [
+  "smgbolt-677160.mp3"
+ ],
+ "uzi": [
+  "uzi-418433-3.mp3",
+  "uzi-418433-6.mp3",
+  "uzi-418433-9.mp3",
+  "uzi-418433-12.mp3"
+ ]
+}
