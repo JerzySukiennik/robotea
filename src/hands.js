@@ -48,7 +48,10 @@ function features(lm, wl, aspect) {
   const spread = clamp01(angle(sub(wl[8], wl[5]), sub(wl[20], wl[17])) / 0.55);
   const palmLen = len(sub(wl[9], wl[0]));
   const pinch = 1 - clamp01((len(sub(wl[4], wl[8])) - 0.012) / (palmLen * 0.75));
-  return { cx: 1 - cx, cy, size, finger, across, curls, spread, pinch };
+  const base = { x: (wl[5].x + wl[6].x) / 2, y: (wl[5].y + wl[6].y) / 2, z: (wl[5].z + wl[6].z) / 2 };
+  const hammer = 1 - clamp01((len(sub(wl[4], base)) / palmLen - 0.34) / 0.42);
+  const index = norm(sub(wl[8], wl[5]));
+  return { cx: 1 - cx, cy, size, finger, across, curls, spread, pinch, hammer, index };
 }
 
 export async function createHands({ video, onStatus = () => {} } = {}) {
@@ -72,7 +75,8 @@ export async function createHands({ video, onStatus = () => {} } = {}) {
       fx: new OneEuro(2, 0.3), fy: new OneEuro(2, 0.3), fz: new OneEuro(2, 0.3),
       ax: new OneEuro(2, 0.3), ay: new OneEuro(2, 0.3), az: new OneEuro(2, 0.3),
       t: new OneEuro(3, 0.2), i: new OneEuro(3, 0.2), m: new OneEuro(3, 0.2), r: new OneEuro(3, 0.2), p: new OneEuro(3, 0.2),
-      spread: new OneEuro(2, 0.1), pinch: new OneEuro(4, 0.3) },
+      spread: new OneEuro(2, 0.1), pinch: new OneEuro(4, 0.3), hammer: new OneEuro(6, 0.5),
+      ix: new OneEuro(3, 0.4), iy: new OneEuro(3, 0.4), iz: new OneEuro(3, 0.4) },
     s: null,
   });
   const state = { R: mk(), L: mk(), fps: 0, ms: 0, frames: 0, video, lastTime: -1 };
@@ -115,6 +119,9 @@ export async function createHands({ video, onStatus = () => {} } = {}) {
         finger: [fin[0], -fin[1], -fin[2]], palm: [pn[0], -pn[1], -pn[2]],
         curls: ['t', 'i', 'm', 'r', 'p'].map(f => F[f].filter(fe.curls[f], t)),
         spread: F.spread.filter(fe.spread, t), pinch: F.pinch.filter(fe.pinch, t),
+        hammer: F.hammer.filter(fe.hammer, t),
+        index: (v => [v[0], -v[1], -v[2]])(norm([F.ix.filter(fe.index[0], t), F.iy.filter(fe.index[1], t), F.iz.filter(fe.index[2], t)])),
+        t,
       };
     }
     for (const side of ['L', 'R']) if (t - state[side].lastSeen > 0.25) state[side].seen = false;

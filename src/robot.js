@@ -1,45 +1,48 @@
-// Robotea: first-person Optimus controller (calibrated hand features to raised-arm IK, wrist orientation, finger curls, torso lean, head and eye camera)
+// Robotea: first-person Optimus controller (calibrated hand features to raised-arm IK, wrist orientation, finger curls, torso lean, head and eye camera, per-mode stance)
 import * as THREE from 'three';
 import { standPose, applyPose, solveLimb, handBasis, bendChest, applyHand, lookHead } from './pose.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const NEUTRAL = { L: V(0.2, 1.24, 0.3), R: V(-0.2, 1.24, 0.3) };
-const GAIN = { x: 1.3, y: 1.0, z: 0.42 };
+const MODES = {
+  hf: { base: { L: V(0.2, 1.24, 0.3), R: V(-0.2, 1.24, 0.3) }, gain: { x: 1.3, y: 1.0, z: 0.42 }, lower: false },
+  range: { base: { L: V(0.15, 1.38, 0.44), R: V(-0.15, 1.38, 0.44) }, gain: { x: 0.6, y: 0.5, z: 0 }, lower: true },
+};
 const LIMIT = { x0: -0.7, x1: 0.7, y0: 0.85, y1: 1.85, z0: 0.12, z1: 0.66 };
 const POLE = { L: V(-1, 1, 0.2).normalize(), R: V(1, 1, 0.2).normalize() };
 export const OPEN = [0.05, 0.03, 0.03, 0.04, 0.06, 0.6];
 
 export function createController(robot, calib) {
   const pose = standPose();
+  let cfg = MODES.hf;
   const neutralQ = {
     L: handBasis('L', V(0.05, 1, 0.3), V(0, 0, 1)),
     R: handBasis('R', V(-0.05, 1, 0.3), V(0, 0, 1)),
   };
   const st = {
-    target: { L: NEUTRAL.L.clone(), R: NEUTRAL.R.clone() },
-    cur: { L: NEUTRAL.L.clone(), R: NEUTRAL.R.clone() },
+    target: { L: cfg.base.L.clone(), R: cfg.base.R.clone() },
+    cur: { L: cfg.base.L.clone(), R: cfg.base.R.clone() },
     adjust: { L: V(), R: V() },
     q: { L: neutralQ.L.clone(), R: neutralQ.R.clone() },
     qTarget: { L: neutralQ.L.clone(), R: neutralQ.R.clone() },
     curls: { L: [...OPEN], R: [...OPEN] },
     closure: { L: 0, R: 0 },
     vel: { L: V(), R: V() },
+    unseen: { L: 9, R: 9 },
     look: V(0, 1.4, 0.8),
     lean: 0, twist: 0, side: 0,
     des: { lean: 0, side: 0, twist: 0 },
   };
+  const over = { q: { L: null, R: null }, curls: { L: null, R: null }, look: null, ref: null };
   const tmp = new THREE.Quaternion(), qPlayer = new THREE.Quaternion();
   const ik = { L: V(), R: V() };
 
   function fromHand(side, s, dt) {
     const n = calib.neutral[side];
-    const d = calib.depth(s.size) - calib.depth(n.size);
+    const r = over.ref?.[side] || n;
+    const b = cfg.base[side];
+    const d = cfg.gain.z ? calib.depth(s.size) - calib.depth(n.size) : 0;
     const t = st.target[side];
-    t.set(
-      NEUTRAL[side].x - (s.cx - n.cx) * GAIN.x,
-      NEUTRAL[side].y - (s.cy - n.cy) * GAIN.y,
-      NEUTRAL[side].z + d * GAIN.z,
-    );
+    t.set(b.x - (s.cx - r.cx) * cfg.gain.x, b.y - (s.cy - r.cy) * cfg.gain.y, b.z + d * cfg.gain.z);
     t.x = THREE.MathUtils.clamp(t.x, LIMIT.x0, LIMIT.x1);
     t.y = THREE.MathUtils.clamp(t.y, LIMIT.y0, LIMIT.y1);
     t.z = THREE.MathUtils.clamp(t.z, LIMIT.z0, LIMIT.z1);
@@ -48,6 +51,7 @@ export function createController(robot, calib) {
       tmp.copy(n.q).invert();
       st.qTarget[side].copy(qPlayer).multiply(tmp).multiply(neutralQ[side]);
     }
+    if (over.curls[side]) return;
     const c = st.curls[side];
     const k = 1 - Math.exp(-dt * 18);
     for (let i = 0; i < 5; i++) c[i] += (s.curls[i] - c[i]) * k;
@@ -58,7 +62,14 @@ export function createController(robot, calib) {
   function update(hands, dt) {
     for (const side of ['L', 'R']) {
       const h = hands?.[side];
-      if (h?.seen && h.s) fromHand(side, h.s, dt);
+      if (h?.seen && h.s) { st.unseen[side] = 0; fromHand(side, h.s, dt); }
+      else st.unseen[side] += dt;
+      if (cfg.lower && st.unseen[side] > 0.6) st.target[side].set(cfg.base[side].x * 1.3, 1.02, 0.3);
+      const oc = over.curls[side];
+      if (oc) {
+        const c = st.curls[side], k = 1 - Math.exp(-dt * 20);
+        for (let i = 0; i < 6; i++) c[i] += (oc[i] - c[i]) * k;
+      }
       const cur = st.cur[side], tgt = st.target[side];
       const step = tgt.clone().sub(cur);
       const maxStep = 3.2 * dt;
@@ -66,7 +77,7 @@ export function createController(robot, calib) {
       const prev = cur.clone();
       cur.add(step.multiplyScalar(1 - Math.exp(-dt * 35)));
       st.vel[side].copy(cur).sub(prev).divideScalar(Math.max(dt, 1e-3));
-      st.q[side].slerp(st.qTarget[side], 1 - Math.exp(-dt * 22));
+      st.q[side].slerp(over.q[side] || st.qTarget[side], 1 - Math.exp(-dt * 22));
       ik[side].copy(cur).add(st.adjust[side]);
     }
     const des = st.des;
@@ -97,10 +108,24 @@ export function createController(robot, calib) {
     solveLimb(robot, 'armR', ik.R, POLE.R, st.q.R);
     applyHand(robot, 'L', st.curls.L);
     applyHand(robot, 'R', st.curls.R);
-    const mid = ik.L.clone().add(ik.R).multiplyScalar(0.5);
-    st.look.lerp(V(mid.x * 0.35, 1.36 + (mid.y - 1.3) * 0.3, 0.85), 1 - Math.exp(-dt * 4));
+    if (over.look) st.look.lerp(over.look, 1 - Math.exp(-dt * 3));
+    else {
+      const mid = ik.L.clone().add(ik.R).multiplyScalar(0.5);
+      st.look.lerp(V(mid.x * 0.35, 1.36 + (mid.y - 1.3) * 0.3, 0.85), 1 - Math.exp(-dt * 4));
+    }
     lookHead(robot, st.look);
     robot.root.updateMatrixWorld(true);
+  }
+
+  function setMode(m) {
+    cfg = MODES[m];
+    for (const side of ['L', 'R']) {
+      st.target[side].copy(cfg.base[side]);
+      over.q[side] = null;
+      over.curls[side] = null;
+    }
+    over.look = null;
+    over.ref = null;
   }
 
   const eye = V(0, 0.035, 0.112);
@@ -117,5 +142,5 @@ export function createController(robot, calib) {
     return { L: ik.L.clone(), R: ik.R.clone(), qL: st.q.L.clone(), qR: st.q.R.clone(), cL: [...st.curls.L], cR: [...st.curls.R], lean: st.lean, side: st.side, twist: st.twist };
   }
 
-  return { st, update, camera, snapshot, ik, neutral: NEUTRAL };
+  return { st, over, update, setMode, camera, snapshot, ik, base: side => cfg.base[side] };
 }

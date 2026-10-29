@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Robotea</title>
-<meta name="description" content="High-five a robot with your real hands. Your webcam moves Optimus. Solo or with a friend online.">
+<meta name="description" content="High-five a robot or shoot at a range with your real hands. Your webcam moves Optimus. Solo or with a friend online.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23111'/><path d='M20 46V24a3 3 0 0 1 6 0v12V16a3 3 0 0 1 6 0v20V18a3 3 0 0 1 6 0v18V24a3 3 0 0 1 6 0v18a14 14 0 0 1-14 14h-2a14 14 0 0 1-8-10z' fill='%23fff'/></svg>">
 <style>
   :root { --ink: #111214; --muted: #6b6d72; --card: rgba(255,255,255,0.92); --line: rgba(17,18,20,0.08); }
@@ -13,9 +13,10 @@
   canvas#view { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   .layer { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; }
   .layer.on { display: flex; }
-  .card { max-height: calc(100vh - 48px); overflow: auto; background: var(--card); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); border-radius: 28px; padding: 40px 44px; width: min(440px, 100%); box-shadow: 0 30px 80px rgba(0,0,0,0.18), 0 0 0 1px var(--line); }
+  .card { max-height: calc(100vh - 48px); overflow: auto; background: var(--card); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); border-radius: 28px; padding: 40px 44px; width: min(500px, 100%); box-shadow: 0 30px 80px rgba(0,0,0,0.18), 0 0 0 1px var(--line); }
   h1 { margin: 0; font: 800 54px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.035em; }
-  .sub { margin: 10px 0 28px; color: var(--muted); font-size: 17px; }
+  h2 { margin: 0 0 16px; font: 800 28px/1.1 -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.02em; }
+  .sub { margin: 10px 0 22px; color: var(--muted); font-size: 17px; }
   .btns { display: grid; gap: 10px; }
   button { appearance: none; border: 0; border-radius: 16px; padding: 15px 18px; font: 600 16px/1 inherit; font-family: inherit; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; background: #efeff0; color: var(--ink); transition: transform .12s ease, background .2s ease; }
   button:hover { background: #e5e5e7; }
@@ -24,6 +25,17 @@
   button.primary:hover { background: #26282c; }
   button small { font-weight: 500; color: var(--muted); font-size: 13px; }
   button.primary small { color: rgba(255,255,255,0.6); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 15px; background: #efeff0; margin: 0 0 16px; }
+  .seg button { justify-content: center; padding: 11px 10px; border-radius: 11px; background: transparent; font-size: 15px; }
+  .seg button:hover { background: rgba(255,255,255,0.5); }
+  .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .guns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0 0 16px; }
+  .guns button { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 5px; padding: 11px 10px 10px; font-size: 13px; line-height: 1.15; border-radius: 12px; }
+  .guns button small { font-size: 11px; }
+  .guns button.on { background: var(--ink); color: #fff; }
+  .guns button.on small { color: rgba(255,255,255,0.6); }
+  #menu .guns { display: none; }
+  #menu.range .guns { display: grid; }
   .join { display: flex; gap: 10px; }
   .join input { flex: 1; min-width: 0; border: 0; border-radius: 16px; padding: 0 16px; background: #efeff0; font: 700 18px/1 'SF Mono', Menlo, monospace; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink); outline: none; }
   .join input:focus { box-shadow: inset 0 0 0 2px var(--ink); }
@@ -38,36 +50,67 @@
   #calibText { font: 700 24px/1.25 -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.015em; margin-top: 6px; }
   #calibBar { height: 6px; border-radius: 3px; background: #e6e6e8; margin-top: 18px; overflow: hidden; }
   #calibBar i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: 3px; transition: width .1s linear; }
+  #picker .card { width: min(560px, 100%); padding: 30px 32px 26px; }
+  #picker .guns { margin-bottom: 14px; }
+  #picker .row { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; }
+  #picker .row button { padding: 11px 16px; font-size: 14px; }
   #preview { position: fixed; left: 18px; bottom: 18px; width: 208px; height: 156px; border-radius: 16px; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: none; }
   #preview.on { display: block; }
-  #room { position: fixed; left: 18px; top: 18px; display: none; align-items: center; gap: 12px; padding: 10px 16px 10px 12px; border-radius: 14px; background: var(--card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px var(--line); }
+  .chip { background: var(--card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px var(--line); border-radius: 14px; }
+  #room { position: fixed; left: 18px; top: 18px; display: none; align-items: center; gap: 12px; padding: 10px 16px 10px 12px; }
   #room.on { display: flex; }
   #room b { font: 800 18px/1 'SF Mono', Menlo, monospace; letter-spacing: 0.18em; padding: 6px 8px; border-radius: 8px; background: #efeff0; }
   #room span { color: var(--muted); }
-  #hud { position: fixed; right: 12px; top: 10px; color: #111; font: 12px/1.4 Menlo, monospace; white-space: pre; display: none; pointer-events: none; }
+  #bar { position: fixed; right: 18px; top: 18px; display: none; gap: 10px; align-items: stretch; }
+  #bar.on { display: flex; }
+  #bar .seg { margin: 0; padding: 4px; }
+  #bar .seg button { padding: 9px 13px; font-size: 14px; }
+  #gunChip { display: none; padding: 8px 10px 8px 14px; gap: 14px; }
+  #gunChip.on { display: flex; }
+  #gunChip b { font-size: 15px; }
+  #gunChip .ammo { display: flex; gap: 8px; font: 700 14px/1 'SF Mono', Menlo, monospace; }
+  #gunChip .ammo span { padding: 6px 8px; border-radius: 8px; background: #efeff0; min-width: 62px; text-align: center; }
+  #gunChip .ammo span.dim { color: #b3b4b8; }
+  #hint { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 12px 18px; font-size: 15px; display: none; text-align: center; max-width: min(640px, calc(100vw - 480px)); transition: opacity .6s ease; pointer-events: none; }
+  #hint.on { display: block; }
+  #hint.fade { opacity: 0; }
+  #hud { position: fixed; right: 18px; top: 78px; color: #111; font: 12px/1.4 Menlo, monospace; white-space: pre; display: none; pointer-events: none; background: rgba(255,255,255,0.8); padding: 8px; border-radius: 8px; }
   #hud.on { display: block; }
-  @media (max-width: 720px), (pointer: coarse) { .card { padding: 30px 26px; } h1 { font-size: 44px; } }
+  @media (max-width: 720px), (pointer: coarse) { .card { padding: 30px 26px; } h1 { font-size: 44px; } .guns { grid-template-columns: repeat(2, 1fr); } }
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
 <canvas id="view"></canvas>
 <canvas id="preview" width="416" height="312"></canvas>
-<div id="room"></div>
+<div id="room" class="chip"></div>
+<div id="bar">
+  <button id="gunChip" class="chip"><b id="gunName">Glock 17</b><span class="ammo"><span id="ammoL">L 17</span><span id="ammoR">R 17</span></span></button>
+  <div class="seg chip" id="gameSeg"><button data-game="hf">High five</button><button data-game="range">Range</button></div>
+</div>
+<div id="hint" class="chip"></div>
 <div id="hud"></div>
 
 <div class="layer" id="notice"><div class="card"><h1>Robotea</h1><p class="sub" id="noticeText"></p></div></div>
 
 <div class="layer" id="menu"><div class="card">
   <h1>Robotea</h1>
-  <p class="sub">High-five a robot with your real hands. Your webcam moves Optimus.</p>
+  <p class="sub" id="menuSub">High-five a robot with your real hands. Your webcam moves Optimus.</p>
+  <div class="seg" id="menuSeg"><button data-game="hf">High five</button><button data-game="range">Shooting range</button></div>
+  <div class="guns" id="menuGuns"></div>
   <div class="btns">
-    <button class="primary" id="btnSolo">Solo <small>a robot holds its hands up</small></button>
+    <button class="primary" id="btnSolo">Solo <small id="soloSmall">a robot holds its hands up</small></button>
     <button id="btnHost">Create a room <small>get a code for a friend</small></button>
     <div class="label">Got a code from a friend?</div>
     <div class="join"><input id="codeIn" maxlength="5" placeholder="CODE" autocomplete="off" spellcheck="false"><button id="btnJoin">Join</button></div>
   </div>
   <p class="fine">Needs a webcam. Works best in Chrome, Brave or Safari on a computer.</p>
+</div></div>
+
+<div class="layer" id="picker"><div class="card">
+  <h2>Pick a gun</h2>
+  <div class="guns" id="pickGuns"></div>
+  <div class="row"><span>Keys 1 to 8 switch guns, N hangs new targets</span><button id="pickClose">Done</button></div>
 </div></div>
 
 <div class="layer" id="calib"><div class="card">

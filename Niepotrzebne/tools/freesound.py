@@ -1,14 +1,21 @@
 # Robotea: search freesound.org (CC0 only, no API key) and download HQ previews as candidates
-import html, json, os, re, sys, urllib.parse, urllib.request
+import html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36'
 OUT = sys.argv[1]
 QUERIES = sys.argv[2:]
 
 
-def get(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA}), timeout=60) as r:
-        return r.read()
+def get(url, tries=6):
+    for k in range(tries):
+        try:
+            time.sleep(1.5)
+            with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA}), timeout=60) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or k == tries - 1:
+                raise
+            time.sleep(20 * (k + 1))
 
 
 os.makedirs(OUT, exist_ok=True)
@@ -16,7 +23,7 @@ found = []
 for q in QUERIES:
     url = 'https://freesound.org/search/?' + urllib.parse.urlencode({'q': q, 'f': 'license:"Creative Commons 0"', 's': 'Rating descending'})
     page = get(url).decode('utf-8', 'replace')
-    for block in page.split('data-sound-id=')[1:]:
+    for block in page.split('data-sound-id=')[1:9]:
         sid = re.match(r'"(\d+)"', block)
         mp3 = re.search(r'data-mp3="([^"]+)"', block)
         title = re.search(r'data-title="([^"]+)"', block) or re.search(r'title="([^"]+)"', block)

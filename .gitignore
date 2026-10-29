@@ -2,3 +2,7 @@
 .claude/
 Niepotrzebne/testdata/
 Niepotrzebne/sfx-candidates/
+Niepotrzebne/sfx-guns/
+Niepotrzebne/sfx-guns2/
+Niepotrzebne/*.log
+Niepotrzebne/screens/
