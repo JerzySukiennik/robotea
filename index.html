@@ -4,51 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Robotea</title>
-<meta name="description" content="Make a cup of tea with a robot's hands. Your webcam moves Optimus.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23111'/><path d='M16 26h28v14a12 12 0 0 1-12 12h-4a12 12 0 0 1-12-12z' fill='%23fff'/><path d='M44 30h4a6 6 0 0 1 0 12h-4' fill='none' stroke='%23fff' stroke-width='4'/></svg>">
+<meta name="description" content="High-five a robot with your real hands. Your webcam moves Optimus. Solo or with a friend online.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23111'/><path d='M20 46V24a3 3 0 0 1 6 0v12V16a3 3 0 0 1 6 0v20V18a3 3 0 0 1 6 0v18V24a3 3 0 0 1 6 0v18a14 14 0 0 1-14 14h-2a14 14 0 0 1-8-10z' fill='%23fff'/></svg>">
 <style>
-  @font-face { font-family: 'Jurek Hand'; src: url('assets/fonts/JurekHand.woff2') format('woff2'); font-weight: 100 900; }
-  :root { --ink: #111214; --muted: #6b6d72; --card: rgba(255,255,255,0.94); --line: rgba(17,18,20,0.08); }
+  :root { --ink: #111214; --muted: #6b6d72; --card: rgba(255,255,255,0.92); --line: rgba(17,18,20,0.08); }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #0d0e10; overflow: hidden; font: 500 15px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; height: 100%; background: #e7e6e3; overflow: hidden; font: 500 15px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
   canvas#view { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   .layer { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; }
   .layer.on { display: flex; }
-  .card { max-height: calc(100vh - 48px); overflow: auto; background: var(--card); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); border-radius: 28px; padding: 40px 44px; width: min(460px, 100%); box-shadow: 0 30px 80px rgba(0,0,0,0.28), 0 0 0 1px var(--line); }
+  .card { max-height: calc(100vh - 48px); overflow: auto; background: var(--card); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); border-radius: 28px; padding: 40px 44px; width: min(440px, 100%); box-shadow: 0 30px 80px rgba(0,0,0,0.18), 0 0 0 1px var(--line); }
   h1 { margin: 0; font: 800 54px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.035em; }
   .sub { margin: 10px 0 28px; color: var(--muted); font-size: 17px; }
   .btns { display: grid; gap: 10px; }
-  button { appearance: none; border: 0; border-radius: 16px; padding: 15px 18px; font: 600 16px/1 inherit; font-family: inherit; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; background: #f1f1f2; color: var(--ink); transition: transform .12s ease, background .2s ease; }
-  button:hover { background: #e7e7e9; }
+  button { appearance: none; border: 0; border-radius: 16px; padding: 15px 18px; font: 600 16px/1 inherit; font-family: inherit; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center; background: #efeff0; color: var(--ink); transition: transform .12s ease, background .2s ease; }
+  button:hover { background: #e5e5e7; }
   button:active { transform: scale(0.985); }
   button.primary { background: var(--ink); color: #fff; }
   button.primary:hover { background: #26282c; }
   button small { font-weight: 500; color: var(--muted); font-size: 13px; }
   button.primary small { color: rgba(255,255,255,0.6); }
-  button[disabled] { opacity: 0.45; cursor: default; }
+  .join { display: flex; gap: 10px; }
+  .join input { flex: 1; min-width: 0; border: 0; border-radius: 16px; padding: 0 16px; background: #efeff0; font: 700 18px/1 'SF Mono', Menlo, monospace; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink); outline: none; }
+  .join input:focus { box-shadow: inset 0 0 0 2px var(--ink); }
+  .join input.bad { box-shadow: inset 0 0 0 2px #c7c7cc; }
+  .join button { flex: none; }
+  .label { margin: 14px 2px 2px; font-size: 13px; color: var(--muted); }
   .fine { margin: 18px 0 0; color: var(--muted); font-size: 13px; }
-  #boot .card, #notice .card { text-align: center; }
-  #bootText { color: var(--muted); margin-top: 10px; }
+  #notice .card { text-align: center; }
   #calib { align-items: flex-end; padding-bottom: 7vh; pointer-events: none; }
   #calib .card { width: min(520px, 100%); text-align: center; padding: 26px 30px; }
   #calibStep { font-size: 13px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
   #calibText { font: 700 24px/1.25 -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.015em; margin-top: 6px; }
   #calibBar { height: 6px; border-radius: 3px; background: #e6e6e8; margin-top: 18px; overflow: hidden; }
   #calibBar i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: 3px; transition: width .1s linear; }
-  #preview { position: fixed; left: 18px; bottom: 18px; width: 208px; height: 156px; border-radius: 16px; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.35); display: none; }
+  #preview { position: fixed; left: 18px; bottom: 18px; width: 208px; height: 156px; border-radius: 16px; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: none; }
   #preview.on { display: block; }
-  #result .card { width: min(520px, 100%); }
-  .stars { font-size: 40px; letter-spacing: 4px; margin: 4px 0 2px; }
-  .stars span { color: #d9d9dc; }
-  .stars b { color: var(--ink); font-weight: 400; }
-  .verdict { font: 700 26px/1.2 -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif; letter-spacing: -0.02em; }
-  .order { color: var(--muted); margin: 6px 0 18px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 22px; font-size: 15px; }
-  td { padding: 7px 0; border-top: 1px solid var(--line); }
-  td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-  td .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 9px; background: #c7c7cc; vertical-align: middle; }
-  td .dot.ok { background: #2f9e5e; }
-  #hud { position: fixed; right: 12px; top: 10px; color: #fff; font: 12px/1.4 Menlo, monospace; text-shadow: 0 1px 2px #000; white-space: pre; display: none; pointer-events: none; }
+  #room { position: fixed; left: 18px; top: 18px; display: none; align-items: center; gap: 12px; padding: 10px 16px 10px 12px; border-radius: 14px; background: var(--card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px var(--line); }
+  #room.on { display: flex; }
+  #room b { font: 800 18px/1 'SF Mono', Menlo, monospace; letter-spacing: 0.18em; padding: 6px 8px; border-radius: 8px; background: #efeff0; }
+  #room span { color: var(--muted); }
+  #hud { position: fixed; right: 12px; top: 10px; color: #111; font: 12px/1.4 Menlo, monospace; white-space: pre; display: none; pointer-events: none; }
   #hud.on { display: block; }
   @media (max-width: 720px), (pointer: coarse) { .card { padding: 30px 26px; } h1 { font-size: 44px; } }
 </style>
@@ -57,39 +53,27 @@
 <body>
 <canvas id="view"></canvas>
 <canvas id="preview" width="416" height="312"></canvas>
+<div id="room"></div>
 <div id="hud"></div>
-
-<div class="layer on" id="boot"><div class="card"><h1>Robotea</h1><div id="bootText">Warming up the kitchen…</div></div></div>
 
 <div class="layer" id="notice"><div class="card"><h1>Robotea</h1><p class="sub" id="noticeText"></p></div></div>
 
 <div class="layer" id="menu"><div class="card">
   <h1>Robotea</h1>
-  <p class="sub">Make a cup of tea with a robot's hands. Your webcam moves Optimus.</p>
+  <p class="sub">High-five a robot with your real hands. Your webcam moves Optimus.</p>
   <div class="btns">
-    <button class="primary" id="btnSolo">Solo <small>one tea, your order</small></button>
-    <button id="btnTrain">Training <small>learn the hands</small></button>
-    <button id="btnDuo">Duo <small>two robots online</small></button>
-    <button id="btnBoard">Leaderboard <small>best cups</small></button>
+    <button class="primary" id="btnSolo">Solo <small>a robot holds its hands up</small></button>
+    <button id="btnHost">Create a room <small>get a code for a friend</small></button>
+    <div class="label">Got a code from a friend?</div>
+    <div class="join"><input id="codeIn" maxlength="5" placeholder="CODE" autocomplete="off" spellcheck="false"><button id="btnJoin">Join</button></div>
   </div>
   <p class="fine">Needs a webcam. Works best in Chrome, Brave or Safari on a computer.</p>
 </div></div>
 
 <div class="layer" id="calib"><div class="card">
   <div id="calibStep">Step 1 of 3</div>
-  <div id="calibText">Hold both hands up in front of the camera</div>
+  <div id="calibText">Hold both hands up, palms facing the screen</div>
   <div id="calibBar"><i></i></div>
-</div></div>
-
-<div class="layer" id="result"><div class="card">
-  <div class="stars" id="resStars"></div>
-  <div class="verdict" id="resVerdict"></div>
-  <div class="order" id="resOrder"></div>
-  <table id="resTable"></table>
-  <div class="btns">
-    <button class="primary" id="btnAgain">Another cup <small>new order</small></button>
-    <button id="btnMenu">Menu</button>
-  </div>
 </div></div>
 
 <script type="module" src="src/main.js"></script>
