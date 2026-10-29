@@ -87,19 +87,18 @@ export async function createHands({ video, onStatus = () => {} } = {}) {
     fpsN++;
     if (now - fpsT > 1000) { state.fps = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now; }
     const aspect = video.videoWidth / video.videoHeight;
-    const found = [];
-    (res.landmarks || []).forEach((lm, k) => {
-      const label = res.handednesses?.[k]?.[0]?.categoryName;
-      const score = res.handednesses?.[k]?.[0]?.score ?? 0;
-      const fe = features(lm, res.worldLandmarks[k], aspect);
-      found.push({ lm, fe, side: label === 'Left' ? 'R' : 'L', score });
-    });
-    if (found.length === 2 && found[0].side === found[1].side) {
+    const found = (res.landmarks || []).slice(0, 2).map((lm, k) => ({ lm, fe: features(lm, res.worldLandmarks[k], aspect) }));
+    const t = now / 1000;
+    if (found.length === 2) {
       found.sort((a, b) => b.fe.cx - a.fe.cx);
       found[0].side = 'R';
       found[1].side = 'L';
+    } else if (found.length === 1) {
+      const h = found[0], x = h.fe.cx;
+      const near = side => state[side].s && t - state[side].lastSeen < 1.2 ? Math.abs(state[side].s.cx - x) : 9;
+      const dL = near('L'), dR = near('R');
+      h.side = dL < 9 || dR < 9 ? (dR <= dL ? 'R' : 'L') : x > 0.5 ? 'R' : 'L';
     }
-    const t = now / 1000;
     for (const h of found) {
       const st = state[h.side];
       const F = st.f, fe = h.fe;

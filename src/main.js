@@ -28,7 +28,7 @@ const fmtTime = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Ma
 function loadCalibration() {
   const c = createCalibration();
   try {
-    const raw = JSON.parse(localStorage.getItem('robotea.calib') || 'null');
+    const raw = JSON.parse(localStorage.getItem('robotea.calib.v2') || 'null');
     if (raw?.neutral) {
       for (const side of ['L', 'R']) {
         Object.assign(c.neutral[side], raw.neutral[side]);
@@ -43,7 +43,7 @@ function loadCalibration() {
 function saveCalibration(c) {
   try {
     const n = s => ({ cx: c.neutral[s].cx, cy: c.neutral[s].cy, size: c.neutral[s].size, q: c.neutral[s].q ? c.neutral[s].q.toArray() : null });
-    localStorage.setItem('robotea.calib', JSON.stringify({ neutral: { L: n('L'), R: n('R') }, near: c.near, far: c.far }));
+    localStorage.setItem('robotea.calib.v2', JSON.stringify({ neutral: { L: n('L'), R: n('R') }, near: c.near, far: c.far }));
   } catch {}
 }
 
