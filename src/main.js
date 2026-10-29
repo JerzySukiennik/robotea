@@ -395,7 +395,8 @@ async function main() {
     if (Q.get('selftest') === 'range') {
       setGame('range');
       shooting.skipZero();
-      selftest = m.createRangeBot({ ctrl, shooting, cycle: Q.has('cycle'), both: !Q.has('one') });
+      selftest = m.createRangeBot({ ctrl, shooting, cycle: Q.has('cycle'), both: !Q.has('one'), demo: Q.has('demo') });
+      window.__shooting = shooting;
     } else selftest = m.createSelftest({ ctrl, partner, G });
   }
 

@@ -22,9 +22,9 @@ export function createSelftest({ ctrl, partner }) {
   };
 }
 
-export function createRangeBot({ ctrl, shooting, cycle = false, both = true }) {
-  const AIMS = [[0.4, 1.49, 4], [-0.42, 1.51, 7], [0, 1.54, 10], [-0.15, 1.0, 5.5], [0.05, 1.05, 8.5]];
-  let t = 0, fireT = 0.8, pick = { L: 1, R: 0 }, side = 'L', gunT = 0, gi = 0;
+export function createRangeBot({ ctrl, shooting, cycle = false, both = true, demo = false }) {
+  const AIMS = demo ? [[0.03, 1.55, 10], [-0.03, 1.53, 10]] : [[0.4, 1.49, 4], [-0.42, 1.51, 7], [0, 1.54, 10], [-0.15, 1.0, 5.5], [0.05, 1.05, 8.5]];
+  let t = 0, fireT = 0.8, pick = demo ? { L: 0, R: 1 } : { L: 1, R: 0 }, side = 'L', gunT = 0, gi = 0;
   return {
     update(dt) {
       t += dt;
@@ -39,8 +39,8 @@ export function createRangeBot({ ctrl, shooting, cycle = false, both = true }) {
       }
       fireT -= dt;
       if (fireT <= 0) {
-        fireT = 0.32;
-        if (shooting.fire(side)) pick[side] = (pick[side] + 1 + Math.floor(Math.random() * 2)) % AIMS.length;
+        fireT = demo ? 0.6 : 0.32;
+        if (shooting.fire(side)) pick[side] = demo ? (side === 'L' ? 0 : 1) : (pick[side] + 1 + Math.floor(Math.random() * 2)) % AIMS.length;
         if (both) side = side === 'L' ? 'R' : 'L';
       }
       gunT += dt;
