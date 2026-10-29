@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robotea · warianty kuchni</title>
+<style>
+  @font-face { font-family: 'Jurek Hand'; src: url('../../assets/fonts/JurekHand.woff2') format('woff2'); font-weight: 100 900; }
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #111214; color: #e9e7e3; font: 500 15px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Helvetica, sans-serif; }
+  header { padding: 28px 32px 8px; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+  header p { margin: 6px 0 0; color: #9c9a96; }
+  #grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; padding: 22px 32px 40px; max-width: 2620px; }
+  figure { margin: 0; }
+  figcaption { display: flex; gap: 12px; align-items: baseline; padding: 0 2px 10px; }
+  figcaption b { font-size: 22px; font-weight: 700; }
+  figcaption span { color: #9c9a96; font-size: 16px; }
+  canvas { display: block; width: 100%; height: auto; border-radius: 14px; background: #1a1b1e; }
+  #status { color: #9c9a96; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header>
+  <h1>Robotea · wygląd kuchni</h1>
+  <p>Widok z głowy Optimusa. Trzy kierunki, po dwa kolory. <span id="status">Renderuję…</span></p>
+</header>
+<div id="grid"></div>
+<script type="module">
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { STYLES } from '../../src/styles.js';
+import { buildKitchen } from '../../src/kitchen.js';
+import { makeMaterials, createRobot } from '../../src/optimus.js';
+import { standPose, applyPose, solveLimb, handBasis, bendChest, applyHand, HAND_PRESETS } from '../../src/pose.js';
+import { configureTextures, texturesReady } from '../../src/textures.js';
+
+configureTextures({ root: '../../', anisotropy: 8 });
+await document.fonts.load('600 60px "Jurek Hand"').catch(() => {});
+
+const W = 1280, H = 720;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envs = {};
+const env = async name => envs[name] ||= pmrem.fromEquirectangular(await new RGBELoader().loadAsync(`../../assets/hdri/${name}.hdr`)).texture;
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+function poseRobot(robot) {
+  applyPose(robot, standPose());
+  bendChest(robot, 0.26);
+  solveLimb(robot, 'armL', V(0.25, 1.065, 0.5), V(-1, 0.4, 0.6), handBasis('L', V(-0.22, -0.42, 1), V(0.12, -1, -0.2)));
+  solveLimb(robot, 'armR', V(-0.19, 1.07, 0.46), V(1, 0.4, 0.6), handBasis('R', V(0.16, -0.48, 1), V(-0.15, -1, -0.18)));
+  applyHand(robot, 'L', [0.35, 0.3, 0.38, 0.45, 0.5, 0.2]);
+  applyHand(robot, 'R', [0.15, 0.08, 0.12, 0.18, 0.24, 0.55]);
+  robot.root.updateMatrixWorld(true);
+}
+
+const grid = document.getElementById('grid');
+window.__images = [];
+const t0 = performance.now();
+for (const [i, st] of STYLES.entries()) {
+  const fig = document.createElement('figure');
+  fig.innerHTML = `<figcaption><b>${i + 1}. ${st.name}</b><span>${st.dir}</span></figcaption>`;
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  fig.appendChild(out);
+  grid.appendChild(fig);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+  const kit = buildKitchen(st, { order: ['Black tea', 'strong', '2 sugars', 'full mug'], temp: '18°C' });
+  scene.add(kit.group);
+  scene.environment = await env(st.hdri);
+  scene.environmentIntensity = st.env;
+  const robot = createRobot(makeMaterials('white'));
+  scene.add(robot.root);
+  poseRobot(robot);
+  const cam = new THREE.PerspectiveCamera(62, W / H, 0.03, 30);
+  cam.position.set(0, 1.635, 0.118);
+  cam.lookAt(0, 1.05, 0.78);
+  await texturesReady();
+
+  renderer.toneMapping = st.tone === 'neutral' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = st.exposure;
+  const rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, rt);
+  composer.addPass(new RenderPass(scene, cam));
+  const ao = new GTAOPass(scene, cam, W, H);
+  ao.updateGtaoMaterial({ radius: 0.22, distanceExponent: 1.4, thickness: 1.2, scale: 1.1, samples: 16 });
+  ao.blendIntensity = 0.85;
+  composer.addPass(ao);
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), st.bloom, 0.5, 0.82));
+  composer.addPass(new OutputPass());
+  renderer.compile(scene, cam);
+  composer.render();
+  composer.render();
+  out.getContext('2d').drawImage(renderer.domElement, 0, 0, W, H);
+  window.__images.push(out.toDataURL('image/jpeg', 0.92).split(',')[1]);
+  composer.dispose();
+  rt.dispose();
+  scene.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+}
+document.getElementById('status').textContent = `Gotowe w ${((performance.now() - t0) / 1000).toFixed(1)} s.`;
+window.__done = true;
+</script>
+</body>
+</html>
